@@ -68,11 +68,6 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		props["@tr"] = spanCtx.TraceID().String()
 		props["@sp"] = spanCtx.SpanID().String()
 		props["@st"] = ctx.Value("start").(time.Time).Format(time.RFC3339Nano)
-		props["@sc"] = map[string]any{
-			"service": map[string]any{
-				"name": "hello",
-			},
-		}
 		props["@ra"] = map[string]any{
 			"service": map[string]any{
 				"name": "slog-seq",
