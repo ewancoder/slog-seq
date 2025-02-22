@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type concurrencyState struct {
@@ -58,8 +60,26 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Convert slog.Level to text
 	levelString := convertLevel(r.Level)
 
+	spanCtx := trace.SpanContextFromContext(ctx)
+
 	// Collect attributes into a map
 	props := make(map[string]interface{})
+	if spanCtx.IsValid() {
+		props["@tr"] = spanCtx.TraceID().String()
+		props["@sp"] = spanCtx.SpanID().String()
+		props["@st"] = ctx.Value("start").(time.Time).Format(time.RFC3339Nano)
+		props["@sc"] = map[string]any{
+			"service": map[string]any{
+				"name": "hello",
+			},
+		}
+		props["@ra"] = map[string]any{
+			"service": map[string]any{
+				"name": "slog-seq",
+			},
+		}
+	}
+
 	if h.options.AddSource {
 		pc := r.PC
 		caller := runtime.CallersFrames([]uintptr{pc})

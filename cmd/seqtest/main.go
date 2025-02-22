@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log/slog"
 	"path"
 	"time"
 
 	slogseq "github.com/sokkalf/slog-seq" // import your library
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 var (
@@ -56,4 +58,26 @@ func main() {
 	slog.Error("This is an error message", "huba", "fjall")
 
 	slog.Debug("This is a debug message", "huba", "fjall", "password", "secret")
+
+	tp := trace.NewTracerProvider(trace.WithSampler(trace.AlwaysSample()))
+	tracer := tp.Tracer("example-tracer")
+	ctx := context.Background()
+	spanCtx, span := tracer.Start(context.WithValue(ctx, "start", time.Now()), "operation")
+
+	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
+	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
+	time.Sleep(1 * time.Second)
+	span.End()
+	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
+	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
+	time.Sleep(100 * time.Millisecond)
+	slog.DebugContext(spanCtx, "This is a debug message with a span", "huba", "fjall", "password", "balle")
+	time.Sleep(400 * time.Millisecond)
+	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
+	span.End()
+	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
+	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
+	time.Sleep(1 * time.Second)
+	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
+	span.End()
 }
