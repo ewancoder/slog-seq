@@ -2,7 +2,9 @@ package slogseq
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +73,13 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		Message:    r.Message,
 		Level:      levelString,
 		Properties: props,
+	}
+
+	if h.options.AddSource {
+		pc := r.PC
+		caller := runtime.CallersFrames([]uintptr{pc})
+		frame, _ := caller.Next()
+		event.Properties["source"] = fmt.Sprintf("%s:%d %s", frame.File, frame.Line, frame.Function)
 	}
 
 	// Send to channel (non-blocking or minimal blocking)

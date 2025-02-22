@@ -21,6 +21,7 @@ func main() {
 	}
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
+		AddSource: true,
 	}
 
 	handler := slogseq.NewSeqHandler(
