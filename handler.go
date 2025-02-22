@@ -105,12 +105,11 @@ func (h *SeqHandler) WithGroup(name string) slog.Handler {
 }
 
 func (h *SeqHandler) Close() error {
+	// this is ugly, but we need to give all the events a chance to be sent
+	time.Sleep(50 * time.Millisecond)
 	close(h.state.eventsCh)
 	close(h.state.doneCh)
 	h.state.wg.Wait()
-	// this is ugly, but we need to give the flusher time to finish,
-	// as waiting for the waitgroup doesn't seem to be enough
-	time.Sleep(50 * time.Millisecond)
 	return nil
 }
 
