@@ -9,8 +9,8 @@ import (
 )
 
 var (
-    seqURL  = flag.String("url", "http://localhost:5341/ingest/clef", "Seq ingestion URL")
-    apiKey  = flag.String("key", "", "Seq API key")
+	seqURL = flag.String("url", "http://localhost:5341/ingest/clef", "Seq ingestion URL")
+	apiKey = flag.String("key", "", "Seq API key")
 )
 
 func main() {
@@ -19,19 +19,24 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-    handler := slogseq.NewSeqHandler(
-		*seqURL,           // seqURL
-		*apiKey,           // apiKey
-        50,               // batchSize
-        2*time.Second,    // flushInterval
-    )
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+
+	handler := slogseq.NewSeqHandler(
+		*seqURL,       // seqURL
+		*apiKey,       // apiKey
+		50,            // batchSize
+		2*time.Second, // flushInterval
+		opts,          // opts
+	)
 	defer handler.Close()
 
-    logger := slog.New(handler).With("app", "slog-seq").With("env", "dev").With("version", "1.0.0")
+	logger := slog.New(handler).With("app", "slog-seq").With("env", "dev").With("version", "1.0.0")
 
-    logger.Info("Hello from slog-seq test command!",
-        "env", "dev",
-        "version", "1.0.0")
+	logger.Info("Hello from slog-seq test command!",
+		"env", "dev",
+		"version", "1.0.0")
 
 	logger.Warn("This is a warning message", "huba", "fjall")
 

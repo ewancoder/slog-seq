@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func NewSeqLogger(seqURL, apiKey string, batchSize int, flushInterval time.Duration) *slog.Logger {
-	handler := NewSeqHandler(seqURL, apiKey, batchSize, flushInterval)
+func NewSeqLogger(seqURL, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) *slog.Logger {
+	handler := NewSeqHandler(seqURL, apiKey, batchSize, flushInterval, opts)
 	return slog.New(handler)
 }

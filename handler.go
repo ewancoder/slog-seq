@@ -25,11 +25,15 @@ type SeqHandler struct {
 	state *concurrencyState
 
 	// Other fields for global attrs, grouping, etc.
-	attrs  []slog.Attr
-	groups []string
+	attrs   []slog.Attr
+	groups  []string
+	options slog.HandlerOptions
 }
 
-func NewSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval time.Duration) *SeqHandler {
+func NewSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) *SeqHandler {
+	if opts == nil {
+		opts = &slog.HandlerOptions{}
+	}
 	h := &SeqHandler{
 		seqURL:        seqURL,
 		apiKey:        apiKey,
@@ -39,6 +43,7 @@ func NewSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval ti
 			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
 			doneCh:   make(chan struct{}),
 		},
+		options: *opts,
 	}
 
 	// Start background flusher
@@ -82,7 +87,9 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *SeqHandler) Enabled(ctx context.Context, l slog.Level) bool {
-	// This handler is always enabled
+	if h.options.Level != nil {
+		return l >= h.options.Level.Level()
+	}
 	return true
 }
 
