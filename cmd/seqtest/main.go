@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log/slog"
+	"path"
 	"time"
 
 	slogseq "github.com/sokkalf/slog-seq" // import your library
@@ -25,6 +26,11 @@ func main() {
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == "password" {
 				a.Value = slog.StringValue("*****")
+			}
+			if a.Key == slog.SourceKey {
+				// Replace the full path with just the file name
+				s := a.Value.Any().(*slog.Source)
+				s.File = path.Base(s.File)
 			}
 			return a
 		},

@@ -2,7 +2,6 @@ package slogseq
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -61,6 +60,14 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	// Collect attributes into a map
 	props := make(map[string]interface{})
+	if h.options.AddSource {
+		pc := r.PC
+		caller := runtime.CallersFrames([]uintptr{pc})
+		frame, _ := caller.Next()
+		source := slog.Source{File: frame.File, Line: frame.Line, Function: frame.Function}
+		sourceAttr := slog.Any(slog.SourceKey, &source)
+		r.AddAttrs(sourceAttr)
+	}
 	h.addAttrs(props, h.attrs)
 	r.Attrs(func(a slog.Attr) bool {
 		if h.options.ReplaceAttr != nil {
@@ -81,12 +88,6 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		Properties: props,
 	}
 
-	if h.options.AddSource {
-		pc := r.PC
-		caller := runtime.CallersFrames([]uintptr{pc})
-		frame, _ := caller.Next()
-		event.Properties["source"] = fmt.Sprintf("%s:%d %s", frame.File, frame.Line, frame.Function)
-	}
 
 	// Send to channel (non-blocking or minimal blocking)
 	select {
