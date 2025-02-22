@@ -63,6 +63,12 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 	props := make(map[string]interface{})
 	h.addAttrs(props, h.attrs)
 	r.Attrs(func(a slog.Attr) bool {
+		if h.options.ReplaceAttr != nil {
+			a = h.options.ReplaceAttr(h.groups, a)
+			if a.Key == "" {
+				return true
+			}
+		}
 		h.addAttr(props, a)
 		return true
 	})

@@ -20,8 +20,14 @@ func main() {
 		return
 	}
 	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level:     slog.LevelDebug,
 		AddSource: true,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == "password" {
+				a.Value = slog.StringValue("*****")
+			}
+			return a
+		},
 	}
 
 	handler := slogseq.NewSeqHandler(
@@ -43,5 +49,5 @@ func main() {
 
 	logger.Error("This is an error message", "huba", "fjall")
 
-	logger.Debug("This is a debug message", "huba", "fjall")
+	logger.Debug("This is a debug message", "huba", "fjall", "password", "secret")
 }
