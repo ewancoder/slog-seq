@@ -32,7 +32,7 @@ type SeqHandler struct {
 	options slog.HandlerOptions
 }
 
-func NewSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) *SeqHandler {
+func newSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) *SeqHandler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}

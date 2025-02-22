@@ -30,24 +30,24 @@ func main() {
 		},
 	}
 
-	handler := slogseq.NewSeqHandler(
+	seqLogger, finisher := slogseq.NewSeqLogger(
 		*seqURL,       // seqURL
 		*apiKey,       // apiKey
 		50,            // batchSize
 		2*time.Second, // flushInterval
 		opts,          // opts
 	)
-	defer handler.Close()
+	defer finisher()
 
-	logger := slog.New(handler).With("app", "slog-seq").With("env", "dev").With("version", "1.0.0")
+	slog.SetDefault(seqLogger.With("app", "slog-seq").With("env", "dev").With("version", "1.0.0"))
 
-	logger.Info("Hello from slog-seq test command!",
+	slog.Info("Hello from slog-seq test command!",
 		"env", "dev",
 		"version", "1.0.0")
 
-	logger.Warn("This is a warning message", "huba", "fjall")
+	slog.Warn("This is a warning message", "huba", "fjall")
 
-	logger.Error("This is an error message", "huba", "fjall")
+	slog.Error("This is an error message", "huba", "fjall")
 
-	logger.Debug("This is a debug message", "huba", "fjall", "password", "secret")
+	slog.Debug("This is a debug message", "huba", "fjall", "password", "secret")
 }
