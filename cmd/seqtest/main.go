@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log/slog"
 	"path"
 	"time"
@@ -67,28 +66,15 @@ func main() {
 	tracer := tp.Tracer("example-tracer")
 	ctx := context.Background()
 	spanCtx, span := tracer.Start(ctx, "operation")
-	span.AddEvent("Starting operation", tr.WithAttributes(attribute.String("huba", "fjall")))
-	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
-	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
-	time.Sleep(1 * time.Second)
-	span.AddEvent("Doing some work")
-	span.End()
-	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
-	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
-	time.Sleep(100 * time.Millisecond)
-	span.AddEvent("Doing some more work")
-	slog.DebugContext(spanCtx, "This is a debug message with a span", "huba", "fjall", "password", "balle")
-	span.AddEvent("This is an event with a span")
-	time.Sleep(400 * time.Millisecond)
-	span.AddEvent("Finishing operation")
-	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
-	span.End()
-	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
-	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
-	span.AddEvent("Not finished yet")
-	time.Sleep(1 * time.Second)
-	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
-	span.AddEvent("I think I'm done")
-	span.RecordError(fmt.Errorf("this is an error"))
+	span.AddEvent("Starting work")
+	time.Sleep(500 * time.Millisecond)
+	slog.InfoContext(spanCtx, "This is a span log message", "key", "value")
+	spanCtx, subSpan := tracer.Start(spanCtx, "sub operation")
+	subSpan.AddEvent("Sub operation started")
+	time.Sleep(500 * time.Millisecond)
+	subSpan.AddEvent("Sub operation completed", tr.WithAttributes(attribute.String("key", "value")))
+	subSpan.End()
+	span.AddEvent("Work done")
+	slog.InfoContext(spanCtx, "All done!")
 	span.End()
 }
