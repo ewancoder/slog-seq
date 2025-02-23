@@ -24,6 +24,9 @@ type SeqHandler struct {
 	batchSize     int
 	flushInterval time.Duration
 
+	// retry buffer
+	retryBuffer []CLEFEvent
+
 	// concurrency
 	state *concurrencyState
 

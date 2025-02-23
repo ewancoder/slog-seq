@@ -8,53 +8,69 @@ import (
 )
 
 func (h *SeqHandler) runBackgroundFlusher() {
-	defer h.state.wg.Done()
+    defer h.state.wg.Done()
 
-	ticker := time.NewTicker(h.flushInterval)
-	defer ticker.Stop()
+    ticker := time.NewTicker(h.flushInterval)
+    defer ticker.Stop()
 
-	events := make([]CLEFEvent, 0, h.batchSize)
+    events := make([]CLEFEvent, 0, h.batchSize)
 
-	for {
-		select {
-		case e, ok := <-h.state.eventsCh:
-			if !ok {
-				if len(events) > 0 {
-					h.sendBatch(events)
-				}
-				return
-			}
-			events = append(events, e)
-			if len(events) >= h.batchSize {
-				h.sendBatch(events)
-				events = events[:0]
-			}
+    for {
+        select {
+        case e, ok := <-h.state.eventsCh:
+            if !ok {
+                if len(events) > 0 {
+                    if len(h.retryBuffer) > 0 {
+                        leftover := h.sendWithRetry(h.retryBuffer)
+                        h.retryBuffer = leftover
+                    }
+                    leftover := h.sendWithRetry(events)
+                    if leftover != nil {
+                        h.retryBuffer = append(h.retryBuffer, leftover...)
+                    }
+                }
+                return
+            }
+            events = append(events, e)
+            if len(events) >= h.batchSize {
+                h.flushCurrentBatch(&events)
+            }
 
-		case <-ticker.C:
-			if len(events) > 0 {
-				h.sendBatch(events)
-				events = events[:0]
-			}
+        case <-ticker.C:
+            if len(events) > 0 {
+                h.flushCurrentBatch(&events)
+            }
 
-		case <-h.state.doneCh:
-			if len(events) > 0 {
-				h.sendBatch(events)
-			}
-			return
-		}
-	}
+        case <-h.state.doneCh:
+            if len(events) > 0 {
+                h.flushCurrentBatch(&events)
+            }
+            return
+        }
+    }
 }
 
-func (h *SeqHandler) sendBatch(events []CLEFEvent) {
+func (h *SeqHandler) flushCurrentBatch(events *[]CLEFEvent) {
+    if len(h.retryBuffer) > 0 {
+        leftover := h.sendWithRetry(h.retryBuffer)
+        h.retryBuffer = leftover
+    }
+    leftover := h.sendWithRetry(*events)
+
+    if leftover != nil {
+        h.retryBuffer = append(h.retryBuffer, leftover...)
+    }
+    *events = (*events)[:0]
+}
+
+func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 	if len(events) == 0 {
-		return
+		return true
 	}
 
 	var sb strings.Builder
-	encoder := json.NewEncoder(&sb)
-
+	enc := json.NewEncoder(&sb)
 	for _, e := range events {
-		// create CLEF data
 		topLevel := map[string]interface{}{
 			"@t": e.Timestamp.Format(time.RFC3339Nano),
 			"@m": e.Message,
@@ -78,15 +94,15 @@ func (h *SeqHandler) sendBatch(events []CLEFEvent) {
 		for k, v := range e.Properties {
 			topLevel[k] = v
 		}
-		if err := encoder.Encode(topLevel); err != nil {
-			// handle error
+		if err := enc.Encode(topLevel); err != nil {
+			// Return false => indicates we should retry
+			return false
 		}
 	}
 
 	req, err := http.NewRequest("POST", h.seqURL, strings.NewReader(sb.String()))
 	if err != nil {
-		// handle error
-		return
+		return false
 	}
 	req.Header.Set("Content-Type", "application/vnd.serilog.clef")
 	if h.apiKey != "" {
@@ -95,12 +111,25 @@ func (h *SeqHandler) sendBatch(events []CLEFEvent) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		// handle error, maybe retry or drop
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		// handle non-2xx response
+		return false
 	}
+
+	// Success
+	return true
+}
+
+func (h *SeqHandler) sendWithRetry(events []CLEFEvent) []CLEFEvent {
+	if len(events) == 0 {
+		return nil
+	}
+	success := h.attemptSendBatch(events)
+	if success {
+		return nil // nothing left to retry
+	}
+	return events
 }
