@@ -2,7 +2,6 @@ package slogseq
 
 import (
 	"context"
-	"fmt"
 
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -12,13 +11,11 @@ type LoggingSpanProcessor struct {
 }
 
 func (p *LoggingSpanProcessor) OnStart(ctx context.Context, s trace.ReadWriteSpan) {
-	fmt.Println("Span started:", s.Name(), s.SpanContext().TraceID(), s.SpanContext().SpanID())
 	// no-op, or you can log the start if you like
 }
 
 func (p *LoggingSpanProcessor) OnEnd(s trace.ReadOnlySpan) {
 	// Called when the span ends
-	fmt.Println("Span ended:", s.Name(), s.SpanContext().TraceID(), s.SpanContext().SpanID())
 	events := s.Events()
 	for _, e := range events {
 		// e.Name, e.Time, e.Attributes, e.DroppedAttributeCount
