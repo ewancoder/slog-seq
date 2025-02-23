@@ -62,6 +62,7 @@ func (p *LoggingSpanProcessor) logOtelEventAsCLEF(span trace.ReadOnlySpan, e tra
 		SpanID:             sc.SpanID().String(),
 		SpanStart:          span.StartTime(),
 		ResourceAttributes: map[string]interface{}{"service": map[string]interface{}{"name": "my-service"}},
+		Properties:         make(map[string]interface{}),
 	}
 
 	if parent := span.Parent(); parent.IsValid() {

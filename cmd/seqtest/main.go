@@ -8,7 +8,9 @@ import (
 	"time"
 
 	slogseq "github.com/sokkalf/slog-seq" // import your library
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
+	tr "go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -64,7 +66,7 @@ func main() {
 	tracer := tp.Tracer("example-tracer")
 	ctx := context.Background()
 	spanCtx, span := tracer.Start(ctx, "operation")
-	span.AddEvent("Starting operation")
+	span.AddEvent("Starting operation", tr.WithAttributes(attribute.String("huba", "fjall")))
 	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
 	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
 	time.Sleep(1 * time.Second)
