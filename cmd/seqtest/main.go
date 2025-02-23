@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"path"
 	"time"
@@ -88,5 +89,6 @@ func main() {
 	time.Sleep(1 * time.Second)
 	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
 	span.AddEvent("I think I'm done")
+	span.RecordError(fmt.Errorf("this is an error"))
 	span.End()
 }
