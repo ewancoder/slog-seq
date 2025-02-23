@@ -18,7 +18,7 @@ import (
 // 	defer finisher()
 // 	slog.SetDefault(seqLogger)
 // 	slog.Info("Hello from slog-seq!")
-func NewSeqLogger(seqURL, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) (*slog.Logger, func() error) {
+func NewSeqLogger(seqURL, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) (*slog.Logger, *SeqHandler) {
 	handler := newSeqHandler(seqURL, apiKey, batchSize, flushInterval, opts)
-	return slog.New(handler), handler.Close
+	return slog.New(handler), handler
 }

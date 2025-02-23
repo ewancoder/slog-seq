@@ -64,16 +64,6 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	// Collect attributes into a map
 	props := make(map[string]interface{})
-	if spanCtx.IsValid() {
-		props["@tr"] = spanCtx.TraceID().String()
-		props["@sp"] = spanCtx.SpanID().String()
-		props["@st"] = ctx.Value("start").(time.Time).Format(time.RFC3339Nano)
-		props["@ra"] = map[string]any{
-			"service": map[string]any{
-				"name": "slog-seq",
-			},
-		}
-	}
 
 	if h.options.AddSource {
 		pc := r.PC
@@ -102,8 +92,16 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		Level:      levelString,
 		Properties: props,
 	}
+	if spanCtx.IsValid() {
+		event.TraceID = spanCtx.TraceID().String()
+		event.SpanID = spanCtx.SpanID().String()
+	}
+	h.HandleCLEFEvent(event)
 
+	return nil
+}
 
+func (h *SeqHandler) HandleCLEFEvent(event CLEFEvent) {
 	// Send to channel (non-blocking or minimal blocking)
 	select {
 	case h.state.eventsCh <- event:
@@ -114,7 +112,6 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		// or you can block (which might block the application)
 		// or consider a better queue strategy
 	}
-	return nil
 }
 
 func (h *SeqHandler) Enabled(ctx context.Context, l slog.Level) bool {

@@ -60,6 +60,21 @@ func (h *SeqHandler) sendBatch(events []CLEFEvent) {
 			"@m": e.Message,
 			"@l": e.Level,
 		}
+		if !e.SpanStart.IsZero() {
+			topLevel["@st"] = e.SpanStart.Format(time.RFC3339Nano)
+		}
+		if e.TraceID != "" {
+			topLevel["@tr"] = e.TraceID
+		}
+		if e.SpanID != "" {
+			topLevel["@sp"] = e.SpanID
+		}
+		if e.ParentSpanID != "" {
+			topLevel["@ps"] = e.ParentSpanID
+		}
+		if len(e.ResourceAttributes) > 0 {
+			topLevel["@ra"] = e.ResourceAttributes
+		}
 		for k, v := range e.Properties {
 			topLevel[k] = v
 		}

@@ -38,14 +38,14 @@ func main() {
 		},
 	}
 
-	seqLogger, finisher := slogseq.NewSeqLogger(
+	seqLogger, handler := slogseq.NewSeqLogger(
 		*seqURL,       // seqURL
 		*apiKey,       // apiKey
 		50,            // batchSize
 		2*time.Second, // flushInterval
 		opts,          // opts
 	)
-	defer finisher()
+	defer handler.Close()
 
 	slog.SetDefault(seqLogger.With("app", "slog-seq").With("env", "dev").With("version", "1.0.0"))
 
@@ -59,25 +59,32 @@ func main() {
 
 	slog.Debug("This is a debug message", "huba", "fjall", "password", "secret")
 
-	tp := trace.NewTracerProvider(trace.WithSampler(trace.AlwaysSample()))
+	spanProcessor := trace.NewSimpleSpanProcessor(&slogseq.LoggingSpanProcessor{Handler: handler})
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(spanProcessor), trace.WithSampler(trace.AlwaysSample()))
 	tracer := tp.Tracer("example-tracer")
 	ctx := context.Background()
-	spanCtx, span := tracer.Start(context.WithValue(ctx, "start", time.Now()), "operation")
-
+	spanCtx, span := tracer.Start(ctx, "operation")
+	span.AddEvent("Starting operation")
 	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
 	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
 	time.Sleep(1 * time.Second)
+	span.AddEvent("Doing some work")
 	span.End()
 	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
 	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
 	time.Sleep(100 * time.Millisecond)
+	span.AddEvent("Doing some more work")
 	slog.DebugContext(spanCtx, "This is a debug message with a span", "huba", "fjall", "password", "balle")
+	span.AddEvent("This is an event with a span")
 	time.Sleep(400 * time.Millisecond)
+	span.AddEvent("Finishing operation")
 	slog.InfoContext(spanCtx, "This is a message with a span", "huba", "fjall")
 	span.End()
 	spanCtx, span = tracer.Start(context.WithValue(spanCtx, "start", time.Now()), "operation")
 	slog.WarnContext(spanCtx, "This is a warning message with a span", "huba", "fjall")
+	span.AddEvent("Not finished yet")
 	time.Sleep(1 * time.Second)
 	slog.ErrorContext(spanCtx, "This is an error message with a span", "huba", "fjall")
+	span.AddEvent("I think I'm done")
 	span.End()
 }
