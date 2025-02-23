@@ -7,36 +7,29 @@ import (
 )
 
 type LoggingSpanProcessor struct {
-	Handler *SeqHandler // or a slog.Logger that wraps your SeqHandler
+	Handler *SeqHandler
 }
 
 func (p *LoggingSpanProcessor) OnStart(ctx context.Context, s trace.ReadWriteSpan) {
-	// no-op, or you can log the start if you like
+	// noop
 }
 
 func (p *LoggingSpanProcessor) OnEnd(s trace.ReadOnlySpan) {
-	// Called when the span ends
 	events := s.Events()
 	for _, e := range events {
-		// e.Name, e.Time, e.Attributes, e.DroppedAttributeCount
-		// Convert these into log or CLEF events
-		// For example:
 		p.logOtelEventAsCLEF(s, e)
 	}
 }
 
 func (p *LoggingSpanProcessor) ForceFlush(ctx context.Context) error {
-	// flush logs if needed
 	return nil
 }
 
 func (p *LoggingSpanProcessor) Shutdown(ctx context.Context) error {
-	// gracefully close
 	return nil
 }
 
 func (p *LoggingSpanProcessor) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
-	// Export spans if needed
 	for _, s := range spans {
 		for _, e := range s.Events() {
 			p.logOtelEventAsCLEF(s, e)
@@ -45,7 +38,6 @@ func (p *LoggingSpanProcessor) ExportSpans(ctx context.Context, spans []trace.Re
 	return nil
 }
 
-// logOtelEventAsCLEF converts an OTEL event into a CLEF log event
 func (p *LoggingSpanProcessor) logOtelEventAsCLEF(span trace.ReadOnlySpan, e trace.Event) {
 	sc := span.SpanContext()
 	if !sc.IsValid() {
