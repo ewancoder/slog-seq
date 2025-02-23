@@ -4,6 +4,12 @@
 
 It also supports some trace functionality.
 
+## Installation
+
+```bash
+go get github.com/sokkalf/slog-seq
+```
+
 ## Quick start
 
 It's pretty easy to get going.
@@ -63,3 +69,9 @@ span.AddEvent("Work done")
 slog.InfoContext(spanCtx, "All done!")
 span.End()
 ```
+
+![Seq with traces](../master/doc/seq_screenshot.png)
+
+## License
+
+MIT
