@@ -8,59 +8,68 @@ import (
 )
 
 func (h *SeqHandler) runBackgroundFlusher() {
-    defer h.state.wg.Done()
+	defer h.state.wg.Done()
 
-    ticker := time.NewTicker(h.flushInterval)
-    defer ticker.Stop()
+	ticker := time.NewTicker(h.flushInterval)
+	defer ticker.Stop()
 
-    events := make([]CLEFEvent, 0, h.batchSize)
+	purgeInterval := h.flushInterval * 60
+	purgeTicker := time.NewTicker(purgeInterval)
+	defer purgeTicker.Stop()
 
-    for {
-        select {
-        case e, ok := <-h.state.eventsCh:
-            if !ok {
-                if len(events) > 0 {
-                    if len(h.retryBuffer) > 0 {
-                        leftover := h.sendWithRetry(h.retryBuffer)
-                        h.retryBuffer = leftover
-                    }
-                    leftover := h.sendWithRetry(events)
-                    if leftover != nil {
-                        h.retryBuffer = append(h.retryBuffer, leftover...)
-                    }
-                }
-                return
-            }
-            events = append(events, e)
-            if len(events) >= h.batchSize {
-                h.flushCurrentBatch(&events)
-            }
+	events := make([]CLEFEvent, 0, h.batchSize)
 
-        case <-ticker.C:
-            if len(events) > 0 {
-                h.flushCurrentBatch(&events)
-            }
+	for {
+		select {
+		case e, ok := <-h.state.eventsCh:
+			if !ok {
+				if len(events) > 0 {
+					if len(h.retryBuffer) > 0 {
+						leftover := h.sendWithRetry(h.retryBuffer)
+						h.retryBuffer = leftover
+					}
+					leftover := h.sendWithRetry(events)
+					if leftover != nil {
+						h.retryBuffer = append(h.retryBuffer, leftover...)
+					}
+				}
+				return
+			}
+			events = append(events, e)
+			if len(events) >= h.batchSize {
+				h.flushCurrentBatch(&events)
+			}
 
-        case <-h.state.doneCh:
-            if len(events) > 0 {
-                h.flushCurrentBatch(&events)
-            }
-            return
-        }
-    }
+		case <-ticker.C:
+			if len(events) > 0 {
+				h.flushCurrentBatch(&events)
+			}
+
+		case <-purgeTicker.C:
+			// Purge events older than 5 minutes from retry buffer
+			cutoff := time.Now().Add(-5 * time.Minute)
+			h.purgeOldEvents(cutoff)
+
+		case <-h.state.doneCh:
+			if len(events) > 0 {
+				h.flushCurrentBatch(&events)
+			}
+			return
+		}
+	}
 }
 
 func (h *SeqHandler) flushCurrentBatch(events *[]CLEFEvent) {
-    if len(h.retryBuffer) > 0 {
-        leftover := h.sendWithRetry(h.retryBuffer)
-        h.retryBuffer = leftover
-    }
-    leftover := h.sendWithRetry(*events)
+	if len(h.retryBuffer) > 0 {
+		leftover := h.sendWithRetry(h.retryBuffer)
+		h.retryBuffer = leftover
+	}
+	leftover := h.sendWithRetry(*events)
 
-    if leftover != nil {
-        h.retryBuffer = append(h.retryBuffer, leftover...)
-    }
-    *events = (*events)[:0]
+	if leftover != nil {
+		h.retryBuffer = append(h.retryBuffer, leftover...)
+	}
+	*events = (*events)[:0]
 }
 
 func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
@@ -132,4 +141,14 @@ func (h *SeqHandler) sendWithRetry(events []CLEFEvent) []CLEFEvent {
 		return nil // nothing left to retry
 	}
 	return events
+}
+
+func (h *SeqHandler) purgeOldEvents(olderThan time.Time) {
+	newBuf := h.retryBuffer[:0]
+	for _, e := range h.retryBuffer {
+		if e.Timestamp.After(olderThan) {
+			newBuf = append(newBuf, e)
+		}
+	}
+	h.retryBuffer = newBuf
 }
