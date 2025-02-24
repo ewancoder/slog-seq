@@ -37,20 +37,14 @@ type SeqHandler struct {
 	options slog.HandlerOptions
 }
 
-func newSeqHandler(seqURL string, apiKey string, batchSize int, flushInterval time.Duration, opts *slog.HandlerOptions) *SeqHandler {
-	if opts == nil {
-		opts = &slog.HandlerOptions{}
-	}
+func newSeqHandler(seqURL string) *SeqHandler {
 	h := &SeqHandler{
-		seqURL:        seqURL,
-		apiKey:        apiKey,
-		batchSize:     batchSize,
-		flushInterval: flushInterval,
+		seqURL: seqURL,
 		state: &concurrencyState{
 			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
 			doneCh:   make(chan struct{}),
 		},
-		options: *opts,
+		options: slog.HandlerOptions{},
 	}
 
 	// Start background flusher

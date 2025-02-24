@@ -40,12 +40,12 @@ func main() {
 		},
 	}
 
-	seqLogger, handler := slogseq.NewSeqLogger(
-		*seqURL,       // seqURL
-		*apiKey,       // apiKey
-		50,            // batchSize
-		2*time.Second, // flushInterval
-		opts,          // opts
+	seqLogger, handler := slogseq.NewLogger(*seqURL,
+		slogseq.WithAPIKey(*apiKey),
+		slogseq.WithHandlerOptions(opts),
+		slogseq.WithBatchSize(50),
+		slogseq.WithFlushInterval(2*time.Second),
+		slogseq.WithGlobalAttrs(slog.String("service", "slog-seq"), slog.Float64("volume", 11.1)),
 	)
 	defer handler.Close()
 
