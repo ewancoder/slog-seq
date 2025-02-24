@@ -19,10 +19,11 @@ type concurrencyState struct {
 
 type SeqHandler struct {
 	// config
-	seqURL        string
-	apiKey        string
-	batchSize     int
-	flushInterval time.Duration
+	seqURL           string
+	apiKey           string
+	batchSize        int
+	flushInterval    time.Duration
+	disableTLSVerify bool
 
 	// retry buffer
 	retryBuffer []CLEFEvent

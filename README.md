@@ -49,6 +49,8 @@ opts := &slog.HandlerOptions{
 }
 ```
 
+If you need to disable TLS certificate verification, you can do so by calling `handler.DisableTLSVerification()`.
+
 ## Traces
 
 ```go
