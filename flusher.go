@@ -155,14 +155,6 @@ func (h *SeqHandler) purgeOldEvents(olderThan time.Time) {
 	h.retryBuffer = newBuf
 }
 
-func (h *SeqHandler) DisableTLSVerification() {
-	h.disableTLSVerify = true
-}
-
-func (h *SeqHandler) EnableTLSVerification() {
-	h.disableTLSVerify = false
-}
-
 func newHttpClient(skipVerify bool) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
