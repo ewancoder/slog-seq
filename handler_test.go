@@ -9,12 +9,11 @@ import (
 
 // TestNewSeqHandler tests constructing a new handler with various config.
 func TestNewSeqHandler(t *testing.T) {
-	handler := newSeqHandler(
-		"http://localhost:5341",
-		"test-key",
-		50,
-		2*time.Second,
-		&slog.HandlerOptions{Level: slog.LevelWarn},
+	_, handler := NewLogger("http://localhost:5341",
+		WithAPIKey("test-key"),
+		WithBatchSize(50),
+		WithFlushInterval(2*time.Second),
+		WithHandlerOptions(&slog.HandlerOptions{Level: slog.LevelWarn}),
 	)
 
 	if handler.seqURL != "http://localhost:5341" {
@@ -39,12 +38,10 @@ func TestNewSeqHandler(t *testing.T) {
 
 // TestSeqHandler_Handle checks that Handle() sends events with correct properties.
 func TestSeqHandler_Handle(t *testing.T) {
-	handler := newSeqHandler(
-		"http://fake",
-		"",
-		10,
-		1*time.Second,
-		nil,
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(1*time.Second),
 	)
 	defer handler.Close()
 
@@ -75,7 +72,12 @@ func TestSeqHandler_Handle(t *testing.T) {
 // TestSeqHandler_Enabled checks that level filtering via HandlerOptions works.
 func TestSeqHandler_Enabled(t *testing.T) {
 	opts := &slog.HandlerOptions{Level: slog.LevelWarn}
-	handler := newSeqHandler("http://fake", "", 10, 1*time.Second, opts)
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(1*time.Second),
+		WithHandlerOptions(opts),
+	)
 	defer handler.Close()
 
 	// Debug/Info should be disabled
@@ -96,7 +98,11 @@ func TestSeqHandler_Enabled(t *testing.T) {
 
 // TestSeqHandler_WithAttrs checks that WithAttrs merges attributes into subsequent logs.
 func TestSeqHandler_WithAttrs(t *testing.T) {
-	handler := newSeqHandler("http://fake", "", 10, 1*time.Second, nil)
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(1*time.Second),
+	)
 	defer handler.Close()
 
 	logger := slog.New(handler)
@@ -120,7 +126,11 @@ func TestSeqHandler_WithAttrs(t *testing.T) {
 
 // TestSeqHandler_WithGroup checks that WithGroup prefixes attribute keys.
 func TestSeqHandler_WithGroup(t *testing.T) {
-	handler := newSeqHandler("http://fake", "", 10, 1*time.Second, nil)
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(1*time.Second),
+	)
 	defer handler.Close()
 
 	logger := slog.New(handler)
@@ -144,7 +154,11 @@ func TestSeqHandler_WithGroup(t *testing.T) {
 
 // TestSeqHandler_Close checks that Close() completes without error and presumably flushes.
 func TestSeqHandler_Close(t *testing.T) {
-	handler := newSeqHandler("http://fake", "", 10, 1*time.Second, nil)
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(1*time.Second),
+	)
 
 	if err := handler.Close(); err != nil {
 		t.Errorf("Close returned error: %v", err)
