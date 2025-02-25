@@ -3,6 +3,7 @@ package slogseq
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"runtime"
 	"strings"
 	"sync"
@@ -28,6 +29,9 @@ type SeqHandler struct {
 	// retry buffer
 	retryBuffer []CLEFEvent
 
+	// http client
+	client *http.Client
+
 	// concurrency
 	state *concurrencyState
 
@@ -40,6 +44,9 @@ type SeqHandler struct {
 func newSeqHandler(seqURL string) *SeqHandler {
 	h := &SeqHandler{
 		seqURL: seqURL,
+		// sane defaults
+		batchSize: 50,
+		flushInterval: 2 * time.Second,
 		state: &concurrencyState{
 			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
 			doneCh:   make(chan struct{}),
@@ -47,11 +54,16 @@ func newSeqHandler(seqURL string) *SeqHandler {
 		options: slog.HandlerOptions{},
 	}
 
+	return h
+}
+
+func (h *SeqHandler) start() {
+	if h.client == nil {
+		h.client = newHttpClient(h.disableTLSVerify)
+	}
 	// Start background flusher
 	h.state.wg.Add(1)
 	go h.runBackgroundFlusher()
-
-	return h
 }
 
 func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {

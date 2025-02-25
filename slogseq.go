@@ -2,6 +2,7 @@ package slogseq
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 )
 
@@ -20,6 +21,7 @@ func NewLogger(seqURL string, opts ...SeqOption) (*slog.Logger, *SeqHandler) {
 	for _, opt := range opts {
 		handler = opt.apply(handler)
 	}
+	handler.start()
 	return slog.New(handler), handler
 }
 
@@ -54,6 +56,13 @@ func WithHandlerOptions(opts *slog.HandlerOptions) SeqOption {
 func WithInsecure() SeqOption {
 	return seqOptionFunc(func(h *SeqHandler) *SeqHandler {
 		h.disableTLSVerify = true
+		return h
+	})
+}
+
+func WithHTTPClient(client *http.Client) SeqOption {
+	return seqOptionFunc(func(h *SeqHandler) *SeqHandler {
+		h.client = client
 		return h
 	})
 }

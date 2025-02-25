@@ -3,6 +3,7 @@ package slogseq
 import (
 	"crypto/tls"
 	"encoding/json"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -119,12 +120,7 @@ func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 		req.Header.Set("X-Seq-ApiKey", h.apiKey)
 	}
 
-	var resp *http.Response
-	if h.disableTLSVerify {
-		resp, err = newInsecureClient().Do(req)
-	} else {
-		resp, err = http.DefaultClient.Do(req)
-	}
+	resp, err := h.client.Do(req)
 	if err != nil {
 		return false
 	}
@@ -167,11 +163,20 @@ func (h *SeqHandler) EnableTLSVerification() {
 	h.disableTLSVerify = false
 }
 
-func newInsecureClient() *http.Client {
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+func newHttpClient(skipVerify bool) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout: 10 * time.Second,
+			}).DialContext,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: skipVerify,
+			},
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
 		},
 	}
-	return &http.Client{Transport: transport}
 }
