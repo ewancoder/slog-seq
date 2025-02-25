@@ -45,7 +45,7 @@ func newSeqHandler(seqURL string) *SeqHandler {
 	h := &SeqHandler{
 		seqURL: seqURL,
 		// sane defaults
-		batchSize: 50,
+		batchSize:     50,
 		flushInterval: 2 * time.Second,
 		state: &concurrencyState{
 			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
@@ -100,7 +100,7 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		Timestamp:  r.Time,
 		Message:    r.Message,
 		Level:      levelString,
-		Properties: props,
+		Properties: dottedToNested(props),
 	}
 	if spanCtx.IsValid() {
 		event.TraceID = spanCtx.TraceID().String()
@@ -173,6 +173,32 @@ func (h *SeqHandler) addAttr(dst map[string]any, a slog.Attr) {
 	}
 	dst[a.Key] = a.Value.Any()
 }
+
+func dottedToNested(props map[string]any) map[string]any {
+	out := make(map[string]any, len(props))
+	for k, v := range props {
+		path := strings.Split(k, ".")
+		addNested(out, path, v)
+	}
+	return out
+}
+
+func addNested(dst map[string]any, path []string, val any) {
+	if len(path) == 1 {
+		dst[path[0]] = val
+		return
+	}
+
+	head := path[0]
+	child, ok := dst[head].(map[string]any)
+	if !ok {
+		child = make(map[string]any)
+		dst[head] = child
+	}
+
+	addNested(child, path[1:], val)
+}
+
 
 func convertLevel(l slog.Level) string {
 	switch l {

@@ -141,11 +141,13 @@ func TestSeqHandler_WithGroup(t *testing.T) {
 	select {
 	case evt := <-handler.state.eventsCh:
 		// We expect keys to be "request.id" and "request.headers.Accept"
-		if evt.Properties["request.id"] != "1234" {
-			t.Errorf("Expected request.id=1234, got %v", evt.Properties["request.id"])
+		request := evt.Properties["request"].(map[string]interface{})
+		headers := request["headers"].(map[string]interface{})
+		if request["id"] != "1234" {
+			t.Errorf("Expected request.id=1234, got %v", request["id"])
 		}
-		if evt.Properties["request.headers.Accept"] != "application/json" {
-			t.Errorf("Expected request.headers.Accept=application/json, got %v", evt.Properties["request.headers.Accept"])
+		if headers["Accept"] != "application/json" {
+			t.Errorf("Expected request.headers.Accept=application/json, got %v", headers["Accept"])
 		}
 	case <-time.After(2000 * time.Millisecond):
 		t.Error("Timed out waiting for grouped event")
