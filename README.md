@@ -15,12 +15,10 @@ go get github.com/sokkalf/slog-seq
 It's pretty easy to get going.
 
 ```go
-seqLogger, handler := slogseq.NewSeqLogger(
-	"http://your-seq-server/ingest/clef",
-	"your-api-key",
-	50,            // batchSize
-	2*time.Second, // flushInterval
-	nil,           // opts go here, if there are any
+seqLogger, handler := slogseq.NewLogger("http://your-seq-server/ingest/clef",
+    slogseq.WithAPIKey("your-api-key"),
+    slogseq.WithBatchSize(50),
+    slogseq.WithFlushInterval(2*time.Second),
 )
 defer handler.Close()
 
@@ -49,7 +47,9 @@ opts := &slog.HandlerOptions{
 }
 ```
 
-If you need to disable TLS certificate verification, you can do so by calling `handler.DisableTLSVerification()`.
+and then pass it to the `NewLogger` function with `slogseq.WithHandlerOptions(opts)`.
+
+If you need to disable TLS certificate verification, you can do so by using the option `slogseq.WithInsecure()`.
 
 ## Traces
 
