@@ -31,10 +31,12 @@ func main() {
 			if a.Key == "password" {
 				a.Value = slog.StringValue("*****")
 			}
-			if a.Key == slog.SourceKey {
+			if a.Key == "gosource" {
 				// Replace the full path with just the file name
-				s := a.Value.Any().(*slog.Source)
-				s.File = path.Base(s.File)
+				s, ok := a.Value.Any().(*slog.Source)
+				if ok {
+					s.File = path.Base(s.File)
+				}
 			}
 			return a
 		},
@@ -46,6 +48,7 @@ func main() {
 		slogseq.WithBatchSize(50),
 		slogseq.WithFlushInterval(2*time.Second),
 		slogseq.WithGlobalAttrs(slog.String("service", "slog-seq"), slog.Float64("volume", 11.1)),
+		slogseq.WithSourceKey("gosource"),
 	)
 	defer handler.Close()
 
@@ -55,7 +58,7 @@ func main() {
 		"env", "dev",
 		"version", "1.0.0")
 
-	slog.Warn("This is a warning message", "huba", "fjall")
+	slog.Warn("This is a warning message", "huba", "fjall", "gosource", "notreallysource")
 
 	slog.Error("This is an error message", "huba", "fjall")
 

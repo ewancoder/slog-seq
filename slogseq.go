@@ -84,6 +84,14 @@ func WithGlobalAttrs(attrs ...slog.Attr) SeqOption {
 	})
 }
 
+// WithSourceKey sets the key to use for the source attribute.
+func WithSourceKey(key string) SeqOption {
+	return seqOptionFunc(func(h *SeqHandler) *SeqHandler {
+		h.sourceKey = key
+		return h
+	})
+}
+
 // NewSeqLogger creates a new Seq logger.
 // seqURL is the URL of the Seq server.
 // apiKey is the API key for the Seq server.

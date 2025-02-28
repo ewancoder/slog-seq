@@ -25,6 +25,7 @@ type SeqHandler struct {
 	batchSize        int
 	flushInterval    time.Duration
 	disableTLSVerify bool
+	sourceKey        string
 
 	// retry buffer
 	retryBuffer []CLEFEvent
@@ -47,6 +48,7 @@ func newSeqHandler(seqURL string) *SeqHandler {
 		// sane defaults
 		batchSize:     50,
 		flushInterval: 2 * time.Second,
+		sourceKey:     slog.SourceKey,
 		state: &concurrencyState{
 			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
 			doneCh:   make(chan struct{}),
@@ -80,7 +82,7 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		caller := runtime.CallersFrames([]uintptr{pc})
 		frame, _ := caller.Next()
 		source := slog.Source{File: frame.File, Line: frame.Line, Function: frame.Function}
-		sourceAttr := slog.Any(slog.SourceKey, &source)
+		sourceAttr := slog.Any(h.sourceKey, &source)
 		r.AddAttrs(sourceAttr)
 	}
 	h.addAttrs(props, h.attrs)
@@ -198,8 +200,6 @@ func addNested(dst map[string]any, path []string, val any) {
 
 	addNested(child, path[1:], val)
 }
-
-
 func convertLevel(l slog.Level) string {
 	switch l {
 	case slog.LevelDebug:
