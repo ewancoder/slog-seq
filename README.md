@@ -49,7 +49,19 @@ opts := &slog.HandlerOptions{
 
 and then pass it to the `NewLogger` function with `slogseq.WithHandlerOptions(opts)`.
 
+For the `AddSource` option, the default key used is `slog.SourceKey` ("source"), but you can change it by using `slogseq.WithSourceKey("your-key")`.
+
+## HTTP client
+
 If you need to disable TLS certificate verification, you can do so by using the option `slogseq.WithInsecure()`.
+
+Alternatively, you can provide your own HTTP client by using the option `slogseq.WithHTTPClient(client)`.
+
+## Multiple workers
+
+You can set the number of workers that will send logs to the Seq server by using the option `slogseq.WithWorkers(n)`.
+
+This can be useful if you have a high enough volume of logs to cause dropped messages.
 
 ## Traces
 
