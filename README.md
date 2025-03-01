@@ -49,7 +49,8 @@ opts := &slog.HandlerOptions{
 
 and then pass it to the `NewLogger` function with `slogseq.WithHandlerOptions(opts)`.
 
-For the `AddSource` option, the default key used is `slog.SourceKey` ("source"), but you can change it by using `slogseq.WithSourceKey("your-key")`.
+For the `AddSource` option, the default key used is `slog.SourceKey` ("source"), but you can change it by using `slogseq.WithSourceKey("your-key")` if this key is already used for something else.
+If you log something else with this key when AddSource is enabled, it will be overwritten.
 
 ## HTTP client
 

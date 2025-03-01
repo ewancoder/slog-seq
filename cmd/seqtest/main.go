@@ -58,6 +58,7 @@ func main() {
 		"env", "dev",
 		"version", "1.0.0")
 
+	// gosource is overwritten by the AddSource option
 	slog.Warn("This is a warning message", "huba", "fjall", "gosource", "notreallysource")
 
 	slog.Error("This is an error message", "huba", "fjall")
