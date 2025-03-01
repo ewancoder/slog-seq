@@ -28,6 +28,7 @@ type SeqHandler struct {
 	disableTLSVerify bool
 	sourceKey        string
 	workerCount      int
+	nonBlocking      bool
 
 	// retry buffer
 	retryBuffer []CLEFEvent
@@ -52,6 +53,7 @@ func newSeqHandler(seqURL string) *SeqHandler {
 		batchSize:     50,
 		flushInterval: 2 * time.Second,
 		workerCount:   1,
+		nonBlocking:   true,
 		sourceKey:     slog.SourceKey,
 		options:       slog.HandlerOptions{},
 	}
@@ -131,15 +133,20 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func (h *SeqHandler) HandleCLEFEvent(event CLEFEvent) {
 	idx := atomic.AddUint32(&h.next, 1) % uint32(len(h.workers))
-	// Send to channel (non-blocking or minimal blocking)
-	select {
-	case h.workers[idx].eventsCh <- event:
-		// success
-	default:
-		// channel is full -> decide if we drop or block
-		// for non-blocking, you might drop
-		// or you can block (which might block the application)
-		// or consider a better queue strategy
+	if h.nonBlocking {
+		// send to channel, drop if full
+		select {
+		case h.workers[idx].eventsCh <- event:
+			// success
+		default:
+			// channel full, drop event
+		}
+	} else {
+		// blocking send
+		select {
+		case h.workers[idx].eventsCh <- event:
+			// success
+		}
 	}
 }
 

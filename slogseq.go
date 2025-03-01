@@ -100,3 +100,12 @@ func WithWorkers(count int) SeqOption {
 		return h
 	})
 }
+
+// WithNonBlocking sets the handler to be non-blocking. Default is true.
+// If set to false, the handler will block until the event is sent.
+func WithNonBlocking(nonBlocking bool) SeqOption {
+	return seqOptionFunc(func(h *SeqHandler) *SeqHandler {
+		h.nonBlocking = nonBlocking
+		return h
+	})
+}
