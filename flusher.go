@@ -105,6 +105,9 @@ func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 		if len(e.ResourceAttributes) > 0 {
 			topLevel["@ra"] = e.ResourceAttributes
 		}
+		if e.SpanKind != "" {
+			topLevel["@sk"] = e.SpanKind
+		}
 		for k, v := range e.Properties {
 			topLevel[k] = v
 		}

@@ -77,7 +77,7 @@ func main() {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(spanProcessor), trace.WithSampler(trace.AlwaysSample()))
 	tracer := tp.Tracer("example-tracer")
 	ctx := context.Background()
-	spanCtx, span := tracer.Start(ctx, "operation")
+	spanCtx, span := tracer.Start(ctx, "operation", tr.WithSpanKind(tr.SpanKindClient))
 	span.AddEvent("Starting work")
 	time.Sleep(500 * time.Millisecond)
 	slog.InfoContext(spanCtx, "This is a span log message", "key", "value")

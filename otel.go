@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/sdk/trace"
+	tr "go.opentelemetry.io/otel/trace"
 )
 
 type LoggingSpanProcessor struct {
@@ -44,12 +45,14 @@ func (p *LoggingSpanProcessor) logOtelEventAsCLEF(span trace.ReadOnlySpan, e tra
 		return
 	}
 
+	spanKind := tr.ValidateSpanKind(span.SpanKind()).String()
 	event := &CLEFEvent{
 		Timestamp:          e.Time,
 		Message:            e.Name,
 		TraceID:            sc.TraceID().String(),
 		SpanID:             sc.SpanID().String(),
 		SpanStart:          span.StartTime(),
+		SpanKind:           spanKind,
 		ResourceAttributes: map[string]interface{}{"service": map[string]interface{}{"name": span.Name()}},
 		Properties:         make(map[string]interface{}),
 	}

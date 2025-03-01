@@ -13,6 +13,7 @@ type CLEFEvent struct {
 	TraceID            string                 `json:"@tr,omitempty"`
 	SpanID             string                 `json:"@sp,omitempty"`
 	SpanStart          time.Time              `json:"@st,omitempty,omitzero"`
+	SpanKind           string                 `json:"@sk,omitempty"`
 	ResourceAttributes map[string]interface{} `json:"@ra,omitempty,omitzero"`
 	ParentSpanID       string                 `json:"@ps,omitempty"`
 }
