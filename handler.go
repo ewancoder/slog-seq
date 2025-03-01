@@ -171,6 +171,11 @@ func (h *SeqHandler) Close() error {
 	return nil
 }
 
+// SourceKey returns the key used when AddSource is enabled.
+func (h *SeqHandler) SourceKey() string {
+	return h.sourceKey
+}
+
 func (h *SeqHandler) addAttrs(dst map[string]any, attrs []slog.Attr) {
 	for _, a := range attrs {
 		h.addAttr(dst, a)
