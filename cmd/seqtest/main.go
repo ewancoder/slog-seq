@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"path"
 	"time"
@@ -60,6 +61,10 @@ func main() {
 
 	// gosource is overwritten by the AddSource option
 	slog.Warn("This is a warning message", "huba", "fjall", "gosource", "notreallysource")
+
+	multiLineMessage := fmt.Sprintf("This is a multi-line message\n\nYep.\n\nWoo hoo.\nYea. It is.\n\n")
+
+	slog.Info(multiLineMessage, "huba", "fjall")
 
 	slog.Error("This is an error message", "huba", "fjall")
 

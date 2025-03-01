@@ -7,6 +7,7 @@ import "time"
 type CLEFEvent struct {
 	Timestamp          time.Time              `json:"@t,omitzero,omitempty"`
 	Message            string                 `json:"@m,omitempty"`
+	Exception          string                 `json:"@x,omitempty"`
 	Level              string                 `json:"@l"`
 	Properties         map[string]interface{} `json:"-"`
 	TraceID            string                 `json:"@tr,omitempty"`

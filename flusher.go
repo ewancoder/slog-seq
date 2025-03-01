@@ -87,6 +87,9 @@ func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 			"@m": e.Message,
 			"@l": e.Level,
 		}
+		if e.Exception != "" {
+			topLevel["@x"] = e.Exception
+		}
 		if !e.SpanStart.IsZero() {
 			topLevel["@st"] = e.SpanStart.Format(time.RFC3339Nano)
 		}

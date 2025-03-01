@@ -102,10 +102,21 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 
+	// split multi-line messages into a message (first line) and 'exception' (rest)
+	msg := strings.SplitN(r.Message, "\n", 2)
+
+	var exception string
+	if len(msg) == 1 {
+		exception = ""
+	} else {
+		exception = msg[1]
+	}
+
 	// Create CLEF event
 	event := CLEFEvent{
 		Timestamp:  r.Time,
-		Message:    r.Message,
+		Message:    msg[0],
+		Exception:  exception,
 		Level:      levelString,
 		Properties: dottedToNested(props),
 	}
