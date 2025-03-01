@@ -66,7 +66,7 @@ func (p *LoggingSpanProcessor) logOtelEventAsCLEF(span trace.ReadOnlySpan, e tra
 		v := attr.Value.AsInterface()
 		event.Properties[k] = v
 		if k == "exception.message" {
-			event.Level = "ERROR"
+			event.Level = CLEFLevelError.String()
 			event.Message = v.(string)
 		}
 	}

@@ -17,3 +17,18 @@ type CLEFEvent struct {
 	ResourceAttributes map[string]interface{} `json:"@ra,omitempty,omitzero"`
 	ParentSpanID       string                 `json:"@ps,omitempty"`
 }
+
+type CLEFLevel string
+
+const (
+	CLEFLevelDebug       CLEFLevel = "Debug"
+	CLEFLevelVerbose     CLEFLevel = "Verbose"
+	CLEFLevelInformation CLEFLevel = "Information"
+	CLEFLevelWarning     CLEFLevel = "Warning"
+	CLEFLevelError       CLEFLevel = "Error"
+	CLEFLevelFatal       CLEFLevel = "Fatal"
+)
+
+func (l CLEFLevel) String() string {
+	return string(l)
+}
