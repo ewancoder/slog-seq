@@ -92,6 +92,15 @@ func WithSourceKey(key string) SeqOption {
 	})
 }
 
+// WithWorkers sets the number of workers to use for sending events.
+// Default is 1. Consider increasing this if you have a very high volume of events.
+func WithWorkers(count int) SeqOption {
+	return seqOptionFunc(func(h *SeqHandler) *SeqHandler {
+		h.workerCount = count
+		return h
+	})
+}
+
 // NewSeqLogger creates a new Seq logger.
 // seqURL is the URL of the Seq server.
 // apiKey is the API key for the Seq server.

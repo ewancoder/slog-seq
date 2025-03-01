@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func (h *SeqHandler) runBackgroundFlusher() {
-	defer h.state.wg.Done()
+func (h *SeqHandler) runBackgroundFlusher(w *worker) {
+	defer w.wg.Done()
 
 	ticker := time.NewTicker(h.flushInterval)
 	defer ticker.Stop()
@@ -23,7 +23,7 @@ func (h *SeqHandler) runBackgroundFlusher() {
 
 	for {
 		select {
-		case e, ok := <-h.state.eventsCh:
+		case e, ok := <-w.eventsCh:
 			if !ok {
 				if len(events) > 0 {
 					if len(h.retryBuffer) > 0 {
@@ -52,7 +52,7 @@ func (h *SeqHandler) runBackgroundFlusher() {
 			cutoff := time.Now().Add(-5 * time.Minute)
 			h.purgeOldEvents(cutoff)
 
-		case <-h.state.doneCh:
+		case <-w.doneCh:
 			if len(events) > 0 {
 				h.flushCurrentBatch(&events)
 			}

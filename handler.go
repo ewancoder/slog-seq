@@ -7,12 +7,13 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
-type concurrencyState struct {
+type worker struct {
 	eventsCh chan CLEFEvent
 	doneCh   chan struct{}
 	wg       sync.WaitGroup
@@ -26,6 +27,7 @@ type SeqHandler struct {
 	flushInterval    time.Duration
 	disableTLSVerify bool
 	sourceKey        string
+	workerCount      int
 
 	// retry buffer
 	retryBuffer []CLEFEvent
@@ -34,7 +36,8 @@ type SeqHandler struct {
 	client *http.Client
 
 	// concurrency
-	state *concurrencyState
+	workers []worker
+	next    uint32
 
 	// Other fields for global attrs, grouping, etc.
 	attrs   []slog.Attr
@@ -48,12 +51,9 @@ func newSeqHandler(seqURL string) *SeqHandler {
 		// sane defaults
 		batchSize:     50,
 		flushInterval: 2 * time.Second,
+		workerCount:   1,
 		sourceKey:     slog.SourceKey,
-		state: &concurrencyState{
-			eventsCh: make(chan CLEFEvent, 1000), // some buffer size
-			doneCh:   make(chan struct{}),
-		},
-		options: slog.HandlerOptions{},
+		options:       slog.HandlerOptions{},
 	}
 
 	return h
@@ -63,9 +63,14 @@ func (h *SeqHandler) start() {
 	if h.client == nil {
 		h.client = newHttpClient(h.disableTLSVerify)
 	}
-	// Start background flusher
-	h.state.wg.Add(1)
-	go h.runBackgroundFlusher()
+	h.workers = make([]worker, h.workerCount)
+	// Start background workers
+	for i := 0; i < h.workerCount; i++ {
+		h.workers[i].eventsCh = make(chan CLEFEvent, 1000)
+		h.workers[i].doneCh = make(chan struct{})
+		h.workers[i].wg.Add(1)
+		go h.runBackgroundFlusher(&h.workers[i])
+	}
 }
 
 func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -114,9 +119,10 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *SeqHandler) HandleCLEFEvent(event CLEFEvent) {
+	idx := atomic.AddUint32(&h.next, 1) % uint32(len(h.workers))
 	// Send to channel (non-blocking or minimal blocking)
 	select {
-	case h.state.eventsCh <- event:
+	case h.workers[idx].eventsCh <- event:
 		// success
 	default:
 		// channel is full -> decide if we drop or block
@@ -157,9 +163,11 @@ func (h *SeqHandler) WithGroup(name string) slog.Handler {
 func (h *SeqHandler) Close() error {
 	// this is ugly, but we need to give all the events a chance to be sent
 	time.Sleep(50 * time.Millisecond)
-	close(h.state.eventsCh)
-	close(h.state.doneCh)
-	h.state.wg.Wait()
+	for i := 0; i < h.workerCount; i++ {
+		close(h.workers[i].eventsCh)
+		close(h.workers[i].doneCh)
+		h.workers[i].wg.Wait()
+	}
 	return nil
 }
 
