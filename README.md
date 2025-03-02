@@ -1,3 +1,7 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/sokkalf/slog-seq.svg)](https://pkg.go.dev/github.com/sokkalf/slog-seq)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sokkalf/slog-seq)](https://goreportcard.com/report/github.com/sokkalf/slog-seq)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 # slog-seq
 
 **slog-seq** is a library for sending logs to a [Seq](https://datalust.co/seq) server, as a handler for Go's structured logging [slog](https://go.dev/blog/slog).
