@@ -74,6 +74,39 @@ func (h *SeqHandler) flushCurrentBatch(events *[]CLEFEvent) {
 	*events = (*events)[:0]
 }
 
+func encodeEvent(e CLEFEvent) map[string]interface{} {
+	topLevel := map[string]interface{}{
+		"@t": e.Timestamp.Format(time.RFC3339Nano),
+		"@m": e.Message,
+		"@l": e.Level,
+	}
+	if e.Exception != "" {
+		topLevel["@x"] = e.Exception
+	}
+	if !e.SpanStart.IsZero() {
+		topLevel["@st"] = e.SpanStart.Format(time.RFC3339Nano)
+	}
+	if e.TraceID != "" {
+		topLevel["@tr"] = e.TraceID
+	}
+	if e.SpanID != "" {
+		topLevel["@sp"] = e.SpanID
+	}
+	if e.ParentSpanID != "" {
+		topLevel["@ps"] = e.ParentSpanID
+	}
+	if len(e.ResourceAttributes) > 0 {
+		topLevel["@ra"] = e.ResourceAttributes
+	}
+	if e.SpanKind != "" {
+		topLevel["@sk"] = e.SpanKind
+	}
+	for k, v := range e.Properties {
+		topLevel[k] = v
+	}
+	return topLevel
+}
+
 func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 	if len(events) == 0 {
 		return true
@@ -82,35 +115,7 @@ func (h *SeqHandler) attemptSendBatch(events []CLEFEvent) bool {
 	var sb strings.Builder
 	enc := json.NewEncoder(&sb)
 	for _, e := range events {
-		topLevel := map[string]interface{}{
-			"@t": e.Timestamp.Format(time.RFC3339Nano),
-			"@m": e.Message,
-			"@l": e.Level,
-		}
-		if e.Exception != "" {
-			topLevel["@x"] = e.Exception
-		}
-		if !e.SpanStart.IsZero() {
-			topLevel["@st"] = e.SpanStart.Format(time.RFC3339Nano)
-		}
-		if e.TraceID != "" {
-			topLevel["@tr"] = e.TraceID
-		}
-		if e.SpanID != "" {
-			topLevel["@sp"] = e.SpanID
-		}
-		if e.ParentSpanID != "" {
-			topLevel["@ps"] = e.ParentSpanID
-		}
-		if len(e.ResourceAttributes) > 0 {
-			topLevel["@ra"] = e.ResourceAttributes
-		}
-		if e.SpanKind != "" {
-			topLevel["@sk"] = e.SpanKind
-		}
-		for k, v := range e.Properties {
-			topLevel[k] = v
-		}
+		topLevel := encodeEvent(e)
 		if err := enc.Encode(topLevel); err != nil {
 			// Return false => indicates we should retry
 			return false
