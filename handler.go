@@ -100,6 +100,10 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 				return true
 			}
 		}
+
+		if v, ok := a.Value.Any().(error); ok {
+			a.Value = slog.StringValue(v.Error())
+		}
 		h.addAttr(props, a)
 		return true
 	})

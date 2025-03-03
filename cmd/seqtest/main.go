@@ -89,4 +89,7 @@ func main() {
 	span.AddEvent("Work done")
 	slog.InfoContext(spanCtx, "All done!")
 	span.End()
+
+	errorTest := fmt.Errorf("This is an error: %w", fmt.Errorf("This is the cause"))
+	slog.Error("This is an error message", "huba", "fjall", "error", errorTest)
 }
