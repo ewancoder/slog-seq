@@ -29,6 +29,7 @@ type SeqHandler struct {
 	sourceKey        string
 	workerCount      int
 	nonBlocking      bool
+	noFlush          bool // Used in tests
 
 	// retry buffer
 	retryBuffer []CLEFEvent
@@ -54,6 +55,7 @@ func newSeqHandler(seqURL string) *SeqHandler {
 		flushInterval: 2 * time.Second,
 		workerCount:   1,
 		nonBlocking:   true,
+		noFlush:       false,
 		sourceKey:     slog.SourceKey,
 		options:       slog.HandlerOptions{},
 	}
