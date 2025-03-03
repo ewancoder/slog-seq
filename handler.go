@@ -101,6 +101,10 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 			}
 		}
 
+		if len(h.groups) > 0 && a.Key != h.sourceKey {
+			a.Key = strings.Join(h.groups, ".") + "." + a.Key
+		}
+
 		if v, ok := a.Value.Any().(error); ok {
 			a.Value = slog.StringValue(v.Error())
 		}
@@ -165,7 +169,7 @@ func (h *SeqHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
 	h2.attrs = append([]slog.Attr(nil), h.attrs...)
 	for _, a := range attrs {
-		if len(h.groups) > 0 {
+		if len(h.groups) > 0 && a.Key != h.sourceKey {
 			a.Key = strings.Join(h.groups, ".") + "." + a.Key
 		}
 		h2.attrs = append(h2.attrs, a)
@@ -208,7 +212,21 @@ func (h *SeqHandler) addAttr(dst map[string]any, a slog.Attr) {
 	if a.Key == "" {
 		return
 	}
-	dst[a.Key] = a.Value.Any()
+
+	switch a.Value.Kind() {
+	case slog.KindGroup:
+		groupMap, ok := dst[a.Key].(map[string]any)
+		if !ok {
+			groupMap = make(map[string]any)
+			dst[a.Key] = groupMap
+		}
+		for _, ga := range a.Value.Group() {
+			h.addAttr(groupMap, ga)
+		}
+
+	default:
+		dst[a.Key] = a.Value.Any()
+	}
 }
 
 func dottedToNested(props map[string]any) map[string]any {
@@ -235,6 +253,7 @@ func addNested(dst map[string]any, path []string, val any) {
 
 	addNested(child, path[1:], val)
 }
+
 func convertLevel(l slog.Level) string {
 	switch l {
 	case slog.LevelDebug:

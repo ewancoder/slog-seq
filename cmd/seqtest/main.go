@@ -92,4 +92,9 @@ func main() {
 
 	errorTest := fmt.Errorf("This is an error: %w", fmt.Errorf("This is the cause"))
 	slog.Error("This is an error message", "huba", "fjall", "error", errorTest)
+
+	slog.New(handler).WithGroup("s").LogAttrs(ctx, slog.LevelDebug, "huba", slog.Int("a", 1), slog.Int("b", 2))
+	slog.New(handler).LogAttrs(ctx, slog.LevelInfo, "huba", slog.Group("s", slog.Int("a", 1), slog.Int("b", 2)))
+
+	slog.Debug("This is a debug message", "huba", "fjall", slog.Int("u", 42))
 }
