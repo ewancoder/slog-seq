@@ -70,6 +70,10 @@ This can be useful if you have a high enough volume of logs to cause dropped mes
 
 ## Traces
 
+`LoggingSpanProcessor` implements a `trace.SpanProcessor` that sends spans to Seq using either `trace.NewSimpleSpanProcessor` or `trace.NewBatchSpanProcessor`, which behaves pretty much the same as slog-seq already handles batching.
+
+Here is an example of how to use it:
+
 ```go
 spanProcessor := trace.NewSimpleSpanProcessor(&slogseq.LoggingSpanProcessor{Handler: handler})
 tp := trace.NewTracerProvider(trace.WithSpanProcessor(spanProcessor), trace.WithSampler(trace.AlwaysSample()))
