@@ -266,3 +266,39 @@ func TestSeqHandler_grouping(t *testing.T) {
 		t.Errorf("events differ: (-got +want)\n%s", diff)
 	}
 }
+
+func TestSeqHandler_replaceAttr(t *testing.T) {
+	opts := &slog.HandlerOptions{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == "password" {
+				a.Value = slog.StringValue("*****")
+			}
+			return a
+		},
+	}
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(5*time.Second),
+		WithWorkers(1),
+		WithHandlerOptions(opts),
+	)
+	defer handler.Close()
+	handler.noFlush = true // Disable flushing for this test
+
+	logger := slog.New(handler)
+	logger.Info("Super secret info", "password", "2Fat2Fly")
+	logger.WithGroup("secret_info").Info("Wohoo", "password", "secret")
+
+	event1 := <-handler.workers[0].eventsCh
+	event2 := <-handler.workers[0].eventsCh
+
+	if event1.Properties["password"] != "*****" {
+		t.Errorf("Expected password=*****, got %v", event1.Properties["password"])
+	}
+
+	secret_info := event2.Properties["secret_info"].(map[string]interface{})
+	if secret_info["password"] != "*****" {
+		t.Errorf("Expected password=*****, got %v", secret_info["password"])
+	}
+}

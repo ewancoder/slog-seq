@@ -71,7 +71,7 @@ func main() {
 	slog.Debug("This is a debug message", "huba", "fjall", "password", "secret")
 	grouped := slog.New(handler).WithGroup("request").With("id", "1234").WithGroup("headers").With("Accept", "application/json")
 
-	grouped.Info("Grouped log")
+	grouped.Info("Grouped log", "password", "secret")
 
 	spanProcessor := trace.NewSimpleSpanProcessor(&slogseq.LoggingSpanProcessor{Handler: handler})
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(spanProcessor), trace.WithSampler(trace.AlwaysSample()))
