@@ -3,8 +3,12 @@ package slogseq
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 // TestNewSeqHandler tests constructing a new handler with various config.
@@ -194,5 +198,71 @@ func TestSeqHandler_convertLevel(t *testing.T) {
 		if out != c.expected {
 			t.Errorf("convertLevel(%v) = %s, want %s", c.in, out, c.expected)
 		}
+	}
+}
+
+// TestSeqHandler_addSource ensures source information is added to log events.
+func TestSeqHandler_addSource(t *testing.T) {
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(5*time.Second),
+		WithSourceKey("gosource"),
+		WithHandlerOptions(&slog.HandlerOptions{AddSource: true}),
+	)
+	defer handler.Close()
+	handler.noFlush = true // Disable flushing for this test
+
+	logger := slog.New(handler)
+
+	logger.Info("Hello, slog-seq!", "user", "alice", "count", 123)
+
+	select {
+	case evt := <-handler.workers[0].eventsCh:
+		if evt.Properties["gosource"] == nil {
+			t.Error("Expected gosource to be set")
+		}
+		source := evt.Properties["gosource"].(*slog.Source)
+		if source.File == "" {
+			t.Error("Expected source file to be set")
+		}
+		if source.Line == 0 {
+			t.Error("Expected source line to be set")
+		}
+		if source.Function == "" {
+			t.Error("Expected source function to be set")
+		}
+		if !strings.Contains(source.Function, "TestSeqHandler_addSource") {
+			t.Errorf("Expected source function to contain TestSeqHandler_addSource, got %s", source.Function)
+		}
+	case <-time.After(2000 * time.Millisecond):
+		t.Error("Timed out waiting for log event in eventsCh")
+	default:
+		t.Error("Expected event to be sent")
+	}
+}
+
+// TestSeqHandler_grouping ensures that grouping works as expected.
+// test case from comments in slog.Handler
+func TestSeqHandler_grouping(t *testing.T) {
+	_, handler := NewLogger("http://fake",
+		WithAPIKey(""),
+		WithBatchSize(10),
+		WithFlushInterval(5*time.Second),
+		WithWorkers(1),
+	)
+	defer handler.Close()
+	handler.noFlush = true // Disable flushing for this test
+
+	ctx := context.Background()
+	logger := slog.New(handler)
+	logger.WithGroup("s").LogAttrs(ctx, slog.LevelInfo, "huba", slog.Int("a", 1), slog.Int("b", 2))
+	logger.LogAttrs(ctx, slog.LevelInfo, "huba", slog.Group("s", slog.Int("a", 1), slog.Int("b", 2)))
+
+	event1 := <-handler.workers[0].eventsCh
+	event2 := <-handler.workers[0].eventsCh
+
+	if diff := cmp.Diff(event1, event2, cmpopts.IgnoreFields(CLEFEvent{}, "Timestamp")); diff != "" {
+		t.Errorf("events differ: (-got +want)\n%s", diff)
 	}
 }
