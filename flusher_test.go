@@ -40,15 +40,16 @@ func TestRunBackgroundFlusher_BasicFlushOnBatchSize(t *testing.T) {
 		seqURL:        "http://example.com",
 		flushInterval: 100 * time.Hour, // large interval so it won't trigger unless forced
 		batchSize:     2,               // flush after 2 events
+		workerCount:   1,
+		workers: []worker{{
+			eventsCh:    make(chan CLEFEvent, 10),
+			doneCh:      make(chan struct{}),
+			wg:          sync.WaitGroup{},
+			retryBuffer: make([]CLEFEvent, 0),
+		}},
 	}
 
-	// worker for runBackgroundFlusher
-	w := &worker{
-		eventsCh: make(chan CLEFEvent, 10),
-		doneCh:   make(chan struct{}),
-		wg:       sync.WaitGroup{},
-	}
-
+	w := &handler.workers[0]
 	w.wg.Add(1)
 
 	// Start runBackgroundFlusher in background
@@ -72,7 +73,7 @@ func TestRunBackgroundFlusher_BasicFlushOnBatchSize(t *testing.T) {
 	// Additional success checks can be done by counting calls, etc.
 
 	// No leftover events expected in retryBuffer
-	assert.Empty(t, handler.retryBuffer, "retryBuffer should be empty after successful flush")
+	assert.Empty(t, w.retryBuffer, "retryBuffer should be empty after successful flush")
 }
 
 func TestRunBackgroundFlusher_FlushOnInterval(t *testing.T) {
@@ -117,7 +118,7 @@ func TestRunBackgroundFlusher_FlushOnInterval(t *testing.T) {
 	// The exact number can vary if the background flusher loop ran more than once
 	// but it should be at least 1.
 	require.GreaterOrEqual(t, callCount, 1)
-	assert.Empty(t, handler.retryBuffer)
+	assert.Empty(t, w.retryBuffer)
 }
 
 func TestRunBackgroundFlusher_RetryOnFailure(t *testing.T) {
@@ -134,13 +135,13 @@ func TestRunBackgroundFlusher_RetryOnFailure(t *testing.T) {
 		seqURL:        "http://example.com",
 		flushInterval: 100 * time.Hour, // won't flush automatically
 		batchSize:     2,
-		retryBuffer:   nil, // start empty
 	}
 
 	w := &worker{
-		eventsCh: make(chan CLEFEvent, 10),
-		doneCh:   make(chan struct{}),
-		wg:       sync.WaitGroup{},
+		eventsCh:    make(chan CLEFEvent, 10),
+		doneCh:      make(chan struct{}),
+		wg:          sync.WaitGroup{},
+		retryBuffer: nil, // start empty
 	}
 
 	w.wg.Add(1)
@@ -167,7 +168,7 @@ func TestRunBackgroundFlusher_RetryOnFailure(t *testing.T) {
 	// So there should have been 2 attempts total.
 	assert.Equal(t, 2, attempts, "expected 2 attempts to send batch")
 	// Retry buffer should be empty after the final success
-	assert.Empty(t, handler.retryBuffer)
+	assert.Empty(t, w.retryBuffer)
 }
 
 func TestPurgeOldEvents(t *testing.T) {
@@ -179,15 +180,16 @@ func TestPurgeOldEvents(t *testing.T) {
 	newEvent := CLEFEvent{Message: "new", Timestamp: now.Add(-1 * time.Minute)}
 
 	handler := &SeqHandler{
-		retryBuffer: []CLEFEvent{oldEvent, newEvent},
+		workers: []worker{{retryBuffer: []CLEFEvent{oldEvent, newEvent}}},
 	}
+	w := &handler.workers[0]
 
 	cutoff := now.Add(-5 * time.Minute)
-	handler.purgeOldEvents(cutoff)
+	handler.purgeOldEvents(w, cutoff)
 
 	// We expect only the new event to remain (the old one is older than cutoff).
-	require.Len(t, handler.retryBuffer, 1, "expected only one event left in retryBuffer")
-	assert.Equal(t, "new", handler.retryBuffer[0].Message)
+	require.Len(t, w.retryBuffer, 1, "expected only one event left in retryBuffer")
+	assert.Equal(t, "new", w.retryBuffer[0].Message)
 }
 
 func TestNoFlushMode(t *testing.T) {
@@ -216,5 +218,5 @@ func TestNoFlushMode(t *testing.T) {
 	w.wg.Wait()
 
 	// Confirm that we never stored anything in retryBuffer
-	assert.Nil(t, handler.retryBuffer, "retryBuffer should remain nil/empty in noFlush mode")
+	assert.Nil(t, w.retryBuffer, "retryBuffer should remain nil/empty in noFlush mode")
 }

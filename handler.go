@@ -17,6 +17,9 @@ type worker struct {
 	eventsCh chan CLEFEvent
 	doneCh   chan struct{}
 	wg       sync.WaitGroup
+	// retry buffer
+	retryBuffer []CLEFEvent
+	purgeTicker *time.Ticker
 }
 
 type SeqHandler struct {
@@ -30,9 +33,6 @@ type SeqHandler struct {
 	workerCount      int
 	nonBlocking      bool
 	noFlush          bool // Used in tests
-
-	// retry buffer
-	retryBuffer []CLEFEvent
 
 	// http client
 	client *http.Client

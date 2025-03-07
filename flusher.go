@@ -19,8 +19,8 @@ func (h *SeqHandler) runBackgroundFlusher(w *worker) {
 	defer ticker.Stop()
 
 	purgeInterval := h.flushInterval * 60
-	purgeTicker := time.NewTicker(purgeInterval)
-	defer purgeTicker.Stop()
+	w.purgeTicker = time.NewTicker(purgeInterval)
+	defer w.purgeTicker.Stop()
 
 	events := make([]CLEFEvent, 0, h.batchSize)
 
@@ -29,50 +29,50 @@ func (h *SeqHandler) runBackgroundFlusher(w *worker) {
 		case e, ok := <-w.eventsCh:
 			if !ok {
 				if len(events) > 0 {
-					if len(h.retryBuffer) > 0 {
-						leftover := h.sendWithRetry(h.retryBuffer)
-						h.retryBuffer = leftover
+					if len(w.retryBuffer) > 0 {
+						leftover := h.sendWithRetry(w.retryBuffer)
+						w.retryBuffer = leftover
 					}
 					leftover := h.sendWithRetry(events)
 					if leftover != nil {
-						h.retryBuffer = append(h.retryBuffer, leftover...)
+						w.retryBuffer = append(w.retryBuffer, leftover...)
 					}
 				}
 				return
 			}
 			events = append(events, e)
 			if len(events) >= h.batchSize {
-				h.flushCurrentBatch(&events)
+				h.flushCurrentBatch(w, &events)
 			}
 
 		case <-ticker.C:
 			if len(events) > 0 {
-				h.flushCurrentBatch(&events)
+				h.flushCurrentBatch(w, &events)
 			}
 
-		case <-purgeTicker.C:
+		case <-w.purgeTicker.C:
 			// Purge events older than 5 minutes from retry buffer
 			cutoff := time.Now().Add(-5 * time.Minute)
-			h.purgeOldEvents(cutoff)
+			h.purgeOldEvents(w, cutoff)
 
 		case <-w.doneCh:
 			if len(events) > 0 {
-				h.flushCurrentBatch(&events)
+				h.flushCurrentBatch(w, &events)
 			}
 			return
 		}
 	}
 }
 
-func (h *SeqHandler) flushCurrentBatch(events *[]CLEFEvent) {
-	if len(h.retryBuffer) > 0 {
-		leftover := h.sendWithRetry(h.retryBuffer)
-		h.retryBuffer = leftover
+func (h *SeqHandler) flushCurrentBatch(w *worker, events *[]CLEFEvent) {
+	if len(w.retryBuffer) > 0 {
+		leftover := h.sendWithRetry(w.retryBuffer)
+		w.retryBuffer = leftover
 	}
 	leftover := h.sendWithRetry(*events)
 
 	if leftover != nil {
-		h.retryBuffer = append(h.retryBuffer, leftover...)
+		w.retryBuffer = append(w.retryBuffer, leftover...)
 	}
 	*events = (*events)[:0]
 }
@@ -159,14 +159,14 @@ func (h *SeqHandler) sendWithRetry(events []CLEFEvent) []CLEFEvent {
 	return events
 }
 
-func (h *SeqHandler) purgeOldEvents(olderThan time.Time) {
-	newBuf := h.retryBuffer[:0]
-	for _, e := range h.retryBuffer {
+func (h *SeqHandler) purgeOldEvents(w *worker, olderThan time.Time) {
+	newBuf := w.retryBuffer[:0]
+	for _, e := range w.retryBuffer {
 		if e.Timestamp.After(olderThan) {
 			newBuf = append(newBuf, e)
 		}
 	}
-	h.retryBuffer = newBuf
+	w.retryBuffer = newBuf
 }
 
 func newHttpClient(skipVerify bool) *http.Client {
