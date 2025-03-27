@@ -5,17 +5,17 @@ import "time"
 // Compact Log Event Format (CLEF) is a JSON-based log event format that Seq uses.
 // https://clef-json.org
 type CLEFEvent struct {
-	Timestamp          time.Time              `json:"@t,omitzero,omitempty"`
-	Message            string                 `json:"@m,omitempty"`
-	Exception          string                 `json:"@x,omitempty"`
-	Level              string                 `json:"@l"`
-	Properties         map[string]interface{} `json:"-"`
-	TraceID            string                 `json:"@tr,omitempty"`
-	SpanID             string                 `json:"@sp,omitempty"`
-	SpanStart          time.Time              `json:"@st,omitempty,omitzero"`
-	SpanKind           string                 `json:"@sk,omitempty"`
-	ResourceAttributes map[string]interface{} `json:"@ra,omitempty,omitzero"`
-	ParentSpanID       string                 `json:"@ps,omitempty"`
+	Timestamp          time.Time      `json:"@t,omitzero"`
+	Message            string         `json:"@m,omitempty"`
+	Exception          string         `json:"@x,omitempty"`
+	Level              string         `json:"@l"`
+	Properties         map[string]any `json:"-"`
+	TraceID            string         `json:"@tr,omitempty"`
+	SpanID             string         `json:"@sp,omitempty"`
+	SpanStart          time.Time      `json:"@st,omitzero"`
+	SpanKind           string         `json:"@sk,omitempty"`
+	ResourceAttributes map[string]any `json:"@ra,omitempty,omitzero"`
+	ParentSpanID       string         `json:"@ps,omitempty"`
 }
 
 type CLEFLevel string

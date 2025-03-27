@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
+	"slices"
 )
 
 type worker struct {
@@ -69,7 +70,7 @@ func (h *SeqHandler) start() {
 	}
 	h.workers = make([]worker, h.workerCount)
 	// Start background workers
-	for i := 0; i < h.workerCount; i++ {
+	for i := range h.workerCount {
 		h.workers[i].eventsCh = make(chan CLEFEvent, 1000)
 		h.workers[i].doneCh = make(chan struct{})
 		h.workers[i].wg.Add(1)
@@ -84,7 +85,7 @@ func (h *SeqHandler) Handle(ctx context.Context, r slog.Record) error {
 	spanCtx := trace.SpanContextFromContext(ctx)
 
 	// Collect attributes into a map
-	props := make(map[string]interface{})
+	props := make(map[string]any)
 
 	if h.options.AddSource {
 		pc := r.PC
@@ -169,7 +170,7 @@ func (h *SeqHandler) Enabled(ctx context.Context, l slog.Level) bool {
 
 func (h *SeqHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
-	h2.attrs = append([]slog.Attr(nil), h.attrs...)
+	h2.attrs = slices.Clone(h.attrs)
 	for _, a := range attrs {
 		if len(h.groups) > 0 && a.Key != h.sourceKey {
 			a.Key = strings.Join(h.groups, ".") + "." + a.Key
@@ -182,7 +183,7 @@ func (h *SeqHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 func (h *SeqHandler) WithGroup(name string) slog.Handler {
 	h2 := *h
-	h2.groups = append([]string(nil), h.groups...)
+	h2.groups = slices.Clone(h.groups)
 	h2.groups = append(h2.groups, name)
 
 	return &h2
@@ -191,7 +192,7 @@ func (h *SeqHandler) WithGroup(name string) slog.Handler {
 func (h *SeqHandler) Close() error {
 	// this is ugly, but we need to give all the events a chance to be sent
 	time.Sleep(50 * time.Millisecond)
-	for i := 0; i < h.workerCount; i++ {
+	for i := range h.workerCount {
 		close(h.workers[i].eventsCh)
 		close(h.workers[i].doneCh)
 		h.workers[i].wg.Wait()

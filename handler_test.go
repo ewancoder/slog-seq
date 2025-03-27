@@ -151,8 +151,8 @@ func TestSeqHandler_WithGroup(t *testing.T) {
 	select {
 	case evt := <-handler.workers[0].eventsCh:
 		// We expect keys to be "request.id" and "request.headers.Accept"
-		request := evt.Properties["request"].(map[string]interface{})
-		headers := request["headers"].(map[string]interface{})
+		request := evt.Properties["request"].(map[string]any)
+		headers := request["headers"].(map[string]any)
 		if request["id"] != "1234" {
 			t.Errorf("Expected request.id=1234, got %v", request["id"])
 		}
@@ -297,7 +297,7 @@ func TestSeqHandler_replaceAttr(t *testing.T) {
 		t.Errorf("Expected password=*****, got %v", event1.Properties["password"])
 	}
 
-	secret_info := event2.Properties["secret_info"].(map[string]interface{})
+	secret_info := event2.Properties["secret_info"].(map[string]any)
 	if secret_info["password"] != "*****" {
 		t.Errorf("Expected password=*****, got %v", secret_info["password"])
 	}

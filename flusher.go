@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"maps"
 )
 
 func (h *SeqHandler) runBackgroundFlusher(w *worker) {
@@ -77,8 +78,8 @@ func (h *SeqHandler) flushCurrentBatch(w *worker, events *[]CLEFEvent) {
 	*events = (*events)[:0]
 }
 
-func encodeEvent(e CLEFEvent) map[string]interface{} {
-	topLevel := map[string]interface{}{
+func encodeEvent(e CLEFEvent) map[string]any {
+	topLevel := map[string]any{
 		"@t": e.Timestamp.Format(time.RFC3339Nano),
 		"@m": e.Message,
 		"@l": e.Level,
@@ -104,9 +105,7 @@ func encodeEvent(e CLEFEvent) map[string]interface{} {
 	if e.SpanKind != "" {
 		topLevel["@sk"] = e.SpanKind
 	}
-	for k, v := range e.Properties {
-		topLevel[k] = v
-	}
+	maps.Copy(topLevel, e.Properties)
 	return topLevel
 }
 
