@@ -3,11 +3,11 @@ package slogseq
 import (
 	"crypto/tls"
 	"encoding/json"
+	"maps"
 	"net"
 	"net/http"
 	"strings"
 	"time"
-	"maps"
 )
 
 func (h *SeqHandler) runBackgroundFlusher(w *worker) {
