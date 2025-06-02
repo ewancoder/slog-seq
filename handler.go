@@ -172,9 +172,17 @@ func (h *SeqHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
 	h2.attrs = slices.Clone(h.attrs)
 	for _, a := range attrs {
-		if len(h.groups) > 0 && a.Key != h.sourceKey {
-			a.Key = strings.Join(h.groups, ".") + "." + a.Key
+		a.Value = a.Value.Resolve()
+
+		if a.Key == "" {
+			h2.attrs = append(h2.attrs, a)
+			continue
 		}
+
+		if len(h2.groups) > 0 && a.Key != h2.sourceKey {
+			a.Key = strings.Join(h2.groups, ".") + "." + a.Key
+		}
+
 		h2.attrs = append(h2.attrs, a)
 	}
 
@@ -212,7 +220,15 @@ func (h *SeqHandler) addAttrs(dst map[string]any, attrs []slog.Attr) {
 }
 
 func (h *SeqHandler) addAttr(dst map[string]any, a slog.Attr) {
+	a.Value = a.Value.Resolve()
+
 	if a.Key == "" {
+		// Anonymous group, inline
+		if a.Value.Kind() == slog.KindGroup {
+			for _, ga := range a.Value.Group() {
+				h.addAttr(dst, ga)
+			}
+		}
 		return
 	}
 
@@ -226,7 +242,6 @@ func (h *SeqHandler) addAttr(dst map[string]any, a slog.Attr) {
 		for _, ga := range a.Value.Group() {
 			h.addAttr(groupMap, ga)
 		}
-
 	default:
 		dst[a.Key] = a.Value.Any()
 	}
