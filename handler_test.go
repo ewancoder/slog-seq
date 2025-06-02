@@ -302,3 +302,61 @@ func TestSeqHandler_replaceAttr(t *testing.T) {
 		t.Errorf("Expected password=*****, got %v", secret_info["password"])
 	}
 }
+
+// A tiny payload that implements slog.LogValuer.
+type payload struct {
+	ID   int64
+	Name string
+}
+
+func (p payload) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Int64("id", p.ID),
+		slog.String("name", p.Name),
+	)
+}
+
+func TestSeqHandler_AnonymousGroup(t *testing.T) {
+
+	_, handler := NewLogger("http://fake",
+		WithWorkers(1),
+	)
+	defer handler.Close()
+	handler.noFlush = true // Disable flushing for the test
+
+	logger := slog.New(handler)
+
+	// 1. Argument-style anonymous group.
+	logger.Info("anon-group-arg",
+		slog.Any("", payload{ID: 42, Name: "keyname"}))
+
+	// 2. With-style anonymous group.
+	logger.With("", payload{ID: 42, Name: "keyname"}).
+		Info("anon-group-with")
+
+	evt1 := <-handler.workers[0].eventsCh
+	evt2 := <-handler.workers[0].eventsCh
+
+	// --- Assertions for the first event (argument style) -----------
+	if got := evt1.Properties["id"]; got != int64(42) {
+		t.Errorf("argument style: expected id=42, got %v", got)
+	}
+	if got := evt1.Properties["name"]; got != "keyname" {
+		t.Errorf("argument style: expected name=arg, got %v", got)
+	}
+
+	// --- Assertions for the second event (With style) --------------
+	if got := evt2.Properties["id"]; got != int64(42) {
+		t.Errorf("With style: expected id=42, got %v", got)
+	}
+	if got := evt2.Properties["name"]; got != "keyname" {
+		t.Errorf("With style: expected name=with, got %v", got)
+	}
+
+	// The two events should differ only in Timestamp and Message.
+	if diff := cmp.Diff(evt1, evt2,
+		cmpopts.IgnoreFields(CLEFEvent{}, "Timestamp", "Message"),
+	); diff != "" {
+		t.Errorf("events differ: (-arg +with)\n%s", diff)
+	}
+}
